@@ -51,7 +51,7 @@ exports.config = {
   // The app under test. In CI the node container can reach the app at
   // http://localhost:8080 because both run in the same Docker network.
   // The Selenium *hub* address is configured below via hostname/port/path.
- baseUrl: process.env.CI === 'true' ? "http://node:8080" : "http://localhost:8080",
+  baseUrl: process.env.BASE_URL || "http://localhost:8080",
 
   waitforTimeout:         10000,
   connectionRetryTimeout: isDebug ? 1200000 : 120000,
