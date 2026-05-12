@@ -29,7 +29,8 @@
     "test": "wdio run wdio.conf.js",
     "test:headless": "wdio run wdio.conf.js --headless",
     "sonar:convert": "node scripts/convert-to-sonar.js",
-    "wdi5": "CI=true wdio run wdio.conf.js; node scripts/convert-to-sonar.js"
+    "wdi5": "CI=true wdio run wdio.conf.js; node scripts/convert-to-sonar.js",
+    "ci-test": "nohup ui5 serve --port 8080 & sleep 15 && npm run wdi5"
   },
   "ui5": {
     "dependencies": ["@sap/ux-ui5-tooling"]
