@@ -1,199 +1,201 @@
-const { wdi5 } = require("wdio-ui5-service");
-
-// ─────────────────────────────────────────────────────────────────────────────
-// wdio-ui5-service v0.9.x  uses  browser.goTo(), NOT wdi5.goTo()
-// wdio-ui5-service v1.x+   uses  wdi5.goTo()
-// We are on 0.9.16 so we always use  browser.goTo()
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Home.test.js
+ *
+ * wdio-ui5-service v0.9.x  →  use browser.url() + browser.waitUntil()
+ *                              NOT wdi5.goTo()  (that's v1.x API)
+ */
 
 describe("Testing home of test project", () => {
 
-  // ── Setup: navigate to app root before the suite ──────────────────────────
+  // ── Setup ──────────────────────────────────────────────────────────────────
   before(async () => {
-    // In CI baseUrl = http://selenium:4444 is the hub, the actual app URL comes
-    // from wdio.conf.js  baseUrl  (process.env.BASE_URL || http://localhost:8080)
-    // browser.url() with a relative path is resolved against baseUrl automatically
+    // Ensure screenshot dir exists (avoids "directory doesn't exist" error)
+    const fs  = require("fs");
+    const dir = "./webapp/test/__screenshots__";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  });
+
+  before(async () => {
+    // browser.url() with a relative path is resolved against wdio.conf.js baseUrl
+    // baseUrl = process.env.BASE_URL || "http://localhost:8080"
     await browser.url("index.html");
-    // Give UI5 bootstrap a moment to complete
+
+    // Wait for UI5 to finish bootstrapping
     await browser.waitUntil(
       async () => {
         return await browser.execute(() => {
-          return typeof sap !== "undefined" && sap.ui && sap.ui.getCore
-            ? sap.ui.getCore().isInitialized()
-            : false;
+          try {
+            return typeof sap !== "undefined" &&
+                   sap.ui &&
+                   typeof sap.ui.getCore === "function" &&
+                   sap.ui.getCore().isInitialized();
+          } catch (e) {
+            return false;
+          }
         });
       },
-      { timeout: 15000, timeoutMsg: "UI5 did not initialise within 15s" }
+      {
+        timeout:    15000,
+        interval:   500,
+        timeoutMsg: "UI5 did not finish bootstrapping within 15s",
+      }
     );
   });
 
-  // ── Create screenshots directory if it doesn't exist ──────────────────────
-  before(async () => {
-    const fs = require("fs");
-    const dir = "./webapp/test/__screenshots__";
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
-
   // ─────────────────────────────────────────────────────────────────────────
-  // GROUP 1 – Page / title checks  (these PASS)
+  // GROUP 1 – Page-level checks  ✓ PASS
   // ─────────────────────────────────────────────────────────────────────────
 
-  it("[PASS] should have title containing 'This is a test project for testing'", async () => {
+  it("[PASS-01] page title should equal 'This is a test project for testing'", async () => {
     const title = await browser.getTitle();
     expect(title).toEqual("This is a test project for testing");
   });
 
-  it("[PASS] should load the correct base URL", async () => {
+  it("[PASS-02] page URL should contain 'index.html'", async () => {
     const url = await browser.getUrl();
     expect(url).toContain("index.html");
   });
 
-  it("[PASS] should not have an empty page title", async () => {
+  it("[PASS-03] page title should not be an empty string", async () => {
     const title = await browser.getTitle();
     expect(title.length).toBeGreaterThan(0);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // GROUP 2 – Button checks  (these PASS)
+  // GROUP 2 – Button checks  ✓ PASS
   // ─────────────────────────────────────────────────────────────────────────
 
-  it("[PASS] should have exactly one button in the App view", async () => {
+  it("[PASS-04] App view should contain exactly one sap.m.Button", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
     expect(btns.length).toEqual(1);
   });
 
-  it("[PASS] should display the correct button label", async () => {
+  it("[PASS-05] button label should equal 'Alle Bestellungen anzeigen'", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
     const text = await btns[0].getText();
     expect(text).toEqual("Alle Bestellungen anzeigen");
   });
 
-  it("[PASS] button should be enabled", async () => {
+  it("[PASS-06] button should be enabled", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
-    const enabled = await btns[0].getEnabled();
-    expect(enabled).toBe(true);
+    expect(await btns[0].getEnabled()).toBe(true);
   });
 
-  it("[PASS] button should be visible", async () => {
+  it("[PASS-07] button should be visible", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
-    const visible = await btns[0].getVisible();
-    expect(visible).toBe(true);
+    expect(await btns[0].getVisible()).toBe(true);
   });
 
-  it("[PASS] button text should not be empty", async () => {
+  it("[PASS-08] button label should not be empty", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
     const text = await btns[0].getText();
     expect(text.length).toBeGreaterThan(0);
   });
 
-  it("[PASS] button should be pressable without throwing", async () => {
+  it("[PASS-09] pressing the button should not throw an error", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
-    let threwError = false;
-    try {
-      await btns[0].press();
-    } catch (e) {
-      threwError = true;
-    }
-    expect(threwError).toBe(false);
+    let threw = false;
+    try { await btns[0].press(); } catch (e) { threw = true; }
+    expect(threw).toBe(false);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // GROUP 3 – App shell  (these PASS)
+  // GROUP 3 – App shell  ✓ PASS
   // ─────────────────────────────────────────────────────────────────────────
 
-  it("[PASS] should render sap.m.App shell in the App view", async () => {
+  it("[PASS-10] sap.m.App control should be rendered in the App view", async () => {
     const apps = await browser.allControls({
       selector: {
         controlType: "sap.m.App",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
     expect(apps.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("[PASS] should have a sap.m.Page in the App view", async () => {
+  it("[PASS-11] sap.m.Page control should be rendered in the App view", async () => {
     const pages = await browser.allControls({
       selector: {
         controlType: "sap.m.Page",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
     expect(pages.length).toBeGreaterThanOrEqual(1);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // GROUP 4 – Intentional FAILURE tests (to demonstrate failures in report)
+  // GROUP 4 – Intentional FAILURES (demonstrates failure reporting in SonarQube)
   // ─────────────────────────────────────────────────────────────────────────
 
-  it("[FAIL] button label should be in English (intentional failure)", async () => {
+  it("[FAIL-01] button label should be in English (intentional failure)", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
     const text = await btns[0].getText();
-    // The actual text is German – this assertion is intentionally wrong
+    // Actual is German – this assertion is intentionally wrong
     expect(text).toEqual("Show All Orders");
   });
 
-  it("[FAIL] page title should match wrong value (intentional failure)", async () => {
+  it("[FAIL-02] page title should match a wrong value (intentional failure)", async () => {
     const title = await browser.getTitle();
-    // Intentionally wrong expected value
     expect(title).toEqual("Wrong Title That Does Not Match");
   });
 
-  it("[FAIL] there should be two buttons (intentional failure)", async () => {
+  it("[FAIL-03] there should be two buttons in the App view (intentional failure)", async () => {
     const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
+        viewName:    "testingproject.view.App",
       },
     });
-    // There is only 1 button – this intentionally expects 2
+    // Only 1 button exists – intentionally expects 2
     expect(btns.length).toEqual(2);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Teardown: screenshot on suite end
+  // Teardown
   // ─────────────────────────────────────────────────────────────────────────
   after(async () => {
     try {
-      await browser.saveScreenshot("./webapp/test/__screenshots__/home-final.png");
+      await browser.saveScreenshot(
+        "./webapp/test/__screenshots__/home-final.png"
+      );
     } catch (e) {
-      console.warn("Screenshot failed (non-fatal):", e.message);
+      // Non-fatal – screenshot failure must never break the suite
+      console.warn("[after] Screenshot skipped:", e.message);
     }
   });
 });

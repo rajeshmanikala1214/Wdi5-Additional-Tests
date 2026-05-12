@@ -28,7 +28,8 @@
     "int-tests": "fiori run --open 'test/integration/opaTests.qunit.html'",
     "test": "wdio run wdio.conf.js",
     "test:headless": "wdio run wdio.conf.js --headless",
-    "wdi5": "CI=true wdio run wdio.conf.js"
+    "sonar:convert": "node scripts/convert-to-sonar.js",
+    "wdi5": "CI=true wdio run wdio.conf.js; node scripts/convert-to-sonar.js"
   },
   "ui5": {
     "dependencies": ["@sap/ux-ui5-tooling"]
