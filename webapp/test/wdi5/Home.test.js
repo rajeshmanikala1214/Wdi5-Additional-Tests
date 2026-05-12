@@ -1,98 +1,199 @@
 const { wdi5 } = require("wdio-ui5-service");
 
+// ─────────────────────────────────────────────────────────────────────────────
+// wdio-ui5-service v0.9.x  uses  browser.goTo(), NOT wdi5.goTo()
+// wdio-ui5-service v1.x+   uses  wdi5.goTo()
+// We are on 0.9.16 so we always use  browser.goTo()
+// ─────────────────────────────────────────────────────────────────────────────
+
 describe("Testing home of test project", () => {
+
+  // ── Setup: navigate to app root before the suite ──────────────────────────
   before(async () => {
-    await wdi5.goTo("#");
+    // In CI baseUrl = http://selenium:4444 is the hub, the actual app URL comes
+    // from wdio.conf.js  baseUrl  (process.env.BASE_URL || http://localhost:8080)
+    // browser.url() with a relative path is resolved against baseUrl automatically
+    await browser.url("index.html");
+    // Give UI5 bootstrap a moment to complete
+    await browser.waitUntil(
+      async () => {
+        return await browser.execute(() => {
+          return typeof sap !== "undefined" && sap.ui && sap.ui.getCore
+            ? sap.ui.getCore().isInitialized()
+            : false;
+        });
+      },
+      { timeout: 15000, timeoutMsg: "UI5 did not initialise within 15s" }
+    );
   });
 
-  // ─── Page Title ───────────────────────────────────────────────────────────
-  it("should have title containing 'This is a test project for testing'", async () => {
+  // ── Create screenshots directory if it doesn't exist ──────────────────────
+  before(async () => {
+    const fs = require("fs");
+    const dir = "./webapp/test/__screenshots__";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GROUP 1 – Page / title checks  (these PASS)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("[PASS] should have title containing 'This is a test project for testing'", async () => {
     const title = await browser.getTitle();
     expect(title).toEqual("This is a test project for testing");
   });
 
-  // ─── Button existence & count ─────────────────────────────────────────────
-  it("should have one button", async () => {
-    const selector = {
-      selector: {
-        controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
-      },
-    };
-    const btn = await browser.allControls(selector);
-    expect(btn.length).toEqual(1);
-  });
-
-  it("should get text of button", async () => {
-    const selector = {
-      selector: {
-        controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
-      },
-    };
-    const btn = await browser.allControls(selector);
-    const title = await btn[0].getText();
-    expect(title).toEqual("Alle Bestellungen anzeigen");
-  });
-
-  // ─── Button state ─────────────────────────────────────────────────────────
-  it("should have an enabled button", async () => {
-    const selector = {
-      selector: {
-        controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
-      },
-    };
-    const btn = await browser.allControls(selector);
-    const isEnabled = await btn[0].getEnabled();
-    expect(isEnabled).toBe(true);
-  });
-
-  it("should have a visible button", async () => {
-    const selector = {
-      selector: {
-        controlType: "sap.m.Button",
-        viewName: "testingproject.view.App",
-      },
-    };
-    const btn = await browser.allControls(selector);
-    const isVisible = await btn[0].getVisible();
-    expect(isVisible).toBe(true);
-  });
-
-  // ─── Page URL ─────────────────────────────────────────────────────────────
-  it("should load the correct base URL", async () => {
+  it("[PASS] should load the correct base URL", async () => {
     const url = await browser.getUrl();
-    expect(url).toContain("localhost");
+    expect(url).toContain("index.html");
   });
 
-  // ─── App Shell / Page structure ───────────────────────────────────────────
-  it("should render the App view shell", async () => {
-    const selector = {
-      selector: {
-        viewName: "testingproject.view.App",
-        controlType: "sap.m.App",
-      },
-    };
-    const app = await browser.allControls(selector);
-    expect(app.length).toBeGreaterThanOrEqual(1);
+  it("[PASS] should not have an empty page title", async () => {
+    const title = await browser.getTitle();
+    expect(title.length).toBeGreaterThan(0);
   });
 
-  // ─── Button press (navigation / side-effect) ──────────────────────────────
-  it("should be pressable without throwing", async () => {
-    const selector = {
+  // ─────────────────────────────────────────────────────────────────────────
+  // GROUP 2 – Button checks  (these PASS)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("[PASS] should have exactly one button in the App view", async () => {
+    const btns = await browser.allControls({
       selector: {
         controlType: "sap.m.Button",
         viewName: "testingproject.view.App",
       },
-    };
-    const btn = await browser.allControls(selector);
-    // Press the button and verify no exception is thrown
-    await expect(btn[0].press()).resolves.not.toThrow();
+    });
+    expect(btns.length).toEqual(1);
   });
 
-  // ─── Screenshot on completion ─────────────────────────────────────────────
+  it("[PASS] should display the correct button label", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    const text = await btns[0].getText();
+    expect(text).toEqual("Alle Bestellungen anzeigen");
+  });
+
+  it("[PASS] button should be enabled", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    const enabled = await btns[0].getEnabled();
+    expect(enabled).toBe(true);
+  });
+
+  it("[PASS] button should be visible", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    const visible = await btns[0].getVisible();
+    expect(visible).toBe(true);
+  });
+
+  it("[PASS] button text should not be empty", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    const text = await btns[0].getText();
+    expect(text.length).toBeGreaterThan(0);
+  });
+
+  it("[PASS] button should be pressable without throwing", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    let threwError = false;
+    try {
+      await btns[0].press();
+    } catch (e) {
+      threwError = true;
+    }
+    expect(threwError).toBe(false);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GROUP 3 – App shell  (these PASS)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("[PASS] should render sap.m.App shell in the App view", async () => {
+    const apps = await browser.allControls({
+      selector: {
+        controlType: "sap.m.App",
+        viewName: "testingproject.view.App",
+      },
+    });
+    expect(apps.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("[PASS] should have a sap.m.Page in the App view", async () => {
+    const pages = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Page",
+        viewName: "testingproject.view.App",
+      },
+    });
+    expect(pages.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GROUP 4 – Intentional FAILURE tests (to demonstrate failures in report)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("[FAIL] button label should be in English (intentional failure)", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    const text = await btns[0].getText();
+    // The actual text is German – this assertion is intentionally wrong
+    expect(text).toEqual("Show All Orders");
+  });
+
+  it("[FAIL] page title should match wrong value (intentional failure)", async () => {
+    const title = await browser.getTitle();
+    // Intentionally wrong expected value
+    expect(title).toEqual("Wrong Title That Does Not Match");
+  });
+
+  it("[FAIL] there should be two buttons (intentional failure)", async () => {
+    const btns = await browser.allControls({
+      selector: {
+        controlType: "sap.m.Button",
+        viewName: "testingproject.view.App",
+      },
+    });
+    // There is only 1 button – this intentionally expects 2
+    expect(btns.length).toEqual(2);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Teardown: screenshot on suite end
+  // ─────────────────────────────────────────────────────────────────────────
   after(async () => {
-    await browser.saveScreenshot("./webapp/test/__screenshots__/home-final.png");
+    try {
+      await browser.saveScreenshot("./webapp/test/__screenshots__/home-final.png");
+    } catch (e) {
+      console.warn("Screenshot failed (non-fatal):", e.message);
+    }
   });
 });
