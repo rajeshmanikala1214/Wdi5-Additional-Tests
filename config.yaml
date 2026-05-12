@@ -1,0 +1,80 @@
+# .pipeline/config.yml
+# ReleaseOwl / SAP Piper pipeline configuration
+# Runs wdi5 e2e tests via npmExecuteTests and publishes results to SonarQube.
+
+general:
+  buildTool: "npm"
+
+stages:
+  # ── 1. Build ──────────────────────────────────────────────────────────────
+  Build:
+    npmExecuteLint: false        # enable if you have a lint script
+
+  # ── 2. Test (wdi5 e2e) ────────────────────────────────────────────────────
+  Test:
+    npmExecuteTests: true
+
+  # ── 3. Code Quality (SonarQube) ───────────────────────────────────────────
+  "Additional Unit Tests":       # reuse this stage or add a dedicated Quality stage
+    sonarExecuteScan: true
+
+steps:
+  # ── npmExecuteTests ────────────────────────────────────────────────────────
+  npmExecuteTests:
+    # Docker image that has Chrome + Node pre-installed
+    dockerImage: "node:20-bookworm"
+
+    # Install ALL devDependencies (including chromedriver, wdio, etc.)
+    installCommand: "npm ci"
+
+    # Run the wdi5 suite in headless / CI mode
+    runCommand: "npm run test:ci"
+
+    # The application under test must be reachable at this URL when the
+    # pipeline executes. Adjust to your deployed / local dev-server address.
+    baseUrl: "http://localhost:8080/index.html"
+
+    # Where your wdio.conf.js lives (project root in this case)
+    workingDirectory: "."
+
+    # Pass BASE_URL so wdio.conf.js picks it up via process.env
+    envs:
+      - "BASE_URL=http://localhost:8080"
+      - "CI=true"
+
+    # Chrome needs these flags to run inside a container
+    dockerEnvVars:
+      CHROMIUM_FLAGS: "--no-sandbox --disable-dev-shm-usage --headless --disable-gpu"
+
+    # ── Optional: sidecar Selenium Grid ───────────────────────────────────
+    # Uncomment if you use a remote Selenium/WebDriver hub instead of local chromedriver
+    # sidecarImage: "selenium/standalone-chrome:latest"
+    # sidecarName: "selenium"
+    # sidecarReadyCommand: "curl -sSf http://localhost:4444/wd/hub/status | grep -q '\"ready\": true'"
+    # sidecarEnvVars:
+    #   SE_NODE_MAX_SESSIONS: "3"
+
+  # ── sonarExecuteScan ───────────────────────────────────────────────────────
+  sonarExecuteScan:
+    # SonarQube server URL — override via Vault / Jenkins credentials
+    serverUrl: "${SONAR_HOST_URL}"        # e.g. https://sonar.example.com
+    # Token stored in Jenkins credentials or Vault
+    # Configure in Piper Vault or as a Jenkins secret text credential named SONAR_TOKEN
+    token: "${SONAR_TOKEN}"
+
+    # sonar-project.properties values (can also live in sonar-project.properties)
+    projectKey: "testingproject"
+    projectName: "Testing Project - wdi5"
+    projectVersion: "0.0.1"
+
+    # Point SonarQube at the JUnit XML produced by the wdi5/wdio run
+    # wdio.conf.js writes results to ./test-results/wdi5-results-*.xml
+    coverageExclusions: "**/*.test.js,**/test/**"
+
+    # SonarQube Generic Test Execution report format for e2e/integration tests
+    # (SonarQube reads JUnit XML natively for most languages; for JS use the setting below)
+    sonarProperties: |
+      sonar.testExecutionReportPaths=test-results/wdi5-results-0-0.xml
+      sonar.sources=webapp
+      sonar.exclusions=webapp/test/**,dist/**,node_modules/**
+      sonar.javascript.lcov.reportPaths=coverage/lcov.info

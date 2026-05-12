@@ -28,7 +28,7 @@
     "int-tests": "fiori run --open 'test/integration/opaTests.qunit.html'",
     "test": "wdio run wdio.conf.js",
     "test:headless": "wdio run wdio.conf.js --headless",
-    "test:ci": "CI=true wdio run wdio.conf.js"
+    "wdi5": "CI=true wdio run wdio.conf.js"
   },
   "ui5": {
     "dependencies": ["@sap/ux-ui5-tooling"]
